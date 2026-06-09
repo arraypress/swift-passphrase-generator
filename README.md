@@ -1,21 +1,29 @@
 # Swift Passphrase Generator
 
-A modern Swift package for generating cryptographically secure passphrases using the EFF Large Wordlist. Perfect for creating memorable yet strong passwords for your applications.
+A modern Swift package for generating cryptographically secure passphrases using the EFF Large Wordlist (7,776 words). Create memorable yet strong passphrases — like `correct-horse-battery-staple` — with control over word count, separator, and capitalization style. Perfect for password managers, onboarding flows, and any app that needs human-friendly secrets.
 
 ## Features
 
-- 🔒 **Cryptographically Secure** - Uses `SecRandomCopyBytes` for true randomness
-- 📝 **EFF Large Wordlist** - Built-in 7,776-word curated list from the Electronic Frontier Foundation
-- 🎯 **Customizable** - Control word count, separators, and capitalization
-- ⚡ **High Performance** - Efficient caching with lazy initialization
-- 🛡️ **Thread-Safe** - Concurrency-safe implementation for modern Swift
-- 📱 **Cross-Platform** - Supports iOS, macOS, tvOS, and watchOS
+- 🔐 **Cryptographically secure** — Word selection uses `SecRandomCopyBytes` for true, unbiased randomness.
+- 📖 **EFF Large Wordlist** — Ships with the 7,776-word list curated by the Electronic Frontier Foundation (~12.92 bits per word).
+- 🎯 **Sensible defaults** — `generate()` returns a 4-word, hyphen-separated, lowercase passphrase (~52 bits of entropy).
+- ⚙️ **Configurable** — Choose word count (2–10), separator, and casing style.
+- 🔤 **Five casing styles** — Lowercase, uppercase, capitalize, sentence case, and alternating.
+- 📦 **Batch generation** — `generateMultiple` produces 1–1000 passphrases in one call.
+- 📝 **Custom word lists** — Supply your own words for non-English or specialized passphrases.
+- 📊 **Entropy calculation** — `entropy(wordCount:wordListSize:)` reports passphrase strength in bits.
+- ℹ️ **Wordlist metadata** — `wordListInfo()` exposes name, size, and per-word entropy.
+- 🛡️ **Safe bounds** — Word counts and batch sizes are automatically clamped.
+
+## Requirements
+
+- iOS 13.0+ / macOS 10.15+ / tvOS 13.0+ / watchOS 6.0+
+- Swift 6.1+
+- Xcode 16.0+
 
 ## Installation
 
 ### Swift Package Manager
-
-Add SwiftPassphrases to your project using Xcode or by adding it to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -23,176 +31,118 @@ dependencies: [
 ]
 ```
 
-## Quick Start
+## Usage
+
+### Quick start
 
 ```swift
 import PassphraseGenerator
 
-// Generate a default passphrase (4 words, lowercase, hyphen-separated)
 let passphrase = PassphraseGenerator.generate()
-// Result: "correct-horse-battery-staple"
+// "correct-horse-battery-staple"
 ```
 
-## Usage Examples
-
-### Basic Generation
+### Custom options
 
 ```swift
-// Default: 4 words, lowercase, hyphen-separated
-let basic = PassphraseGenerator.generate()
-// "aluminum-beacon-cluster-devoted"
+import PassphraseGenerator
 
-// Custom word count (automatically clamped between 2-10)
-let longer = PassphraseGenerator.generate(wordCount: 6)
-// "aluminum-beacon-cluster-devoted-examine-firewall"
+let passphrase = PassphraseGenerator.generate(
+    wordCount: 5,
+    separator: ".",
+    casing: .capitalize
+)
+// "Aluminum.Beacon.Cluster.Devoted.Examine"
 ```
 
-### Custom Formatting
+### Casing styles
 
 ```swift
-// Different separators
-let dotted = PassphraseGenerator.generate(separator: ".")
-// "aluminum.beacon.cluster.devoted"
+import PassphraseGenerator
 
-let spaced = PassphraseGenerator.generate(separator: " ")
-// "aluminum beacon cluster devoted"
-
-// Different capitalization styles
-let capitalized = PassphraseGenerator.generate(casing: .capitalize)
-// "Aluminum-Beacon-Cluster-Devoted"
-
-let sentence = PassphraseGenerator.generate(casing: .sentenceCase)
-// "Aluminum-beacon-cluster-devoted"
-
-let alternating = PassphraseGenerator.generate(casing: .alternating)
-// "aluminum-BEACON-cluster-DEVOTED"
+PassphraseGenerator.generate(casing: .lowercase)     // correct-horse-battery-staple
+PassphraseGenerator.generate(casing: .uppercase)     // CORRECT-HORSE-BATTERY-STAPLE
+PassphraseGenerator.generate(casing: .capitalize)    // Correct-Horse-Battery-Staple
+PassphraseGenerator.generate(casing: .sentenceCase)  // Correct-horse-battery-staple
+PassphraseGenerator.generate(casing: .alternating)   // correct-HORSE-battery-STAPLE
 ```
 
-### Custom Word Lists
+### Generating multiple passphrases
 
 ```swift
-// Use your own word list
-let customWords = ["apple", "banana", "cherry", "dragon", "elephant"]
-let custom = PassphraseGenerator.generate(
+import PassphraseGenerator
+
+// Defaults: 10 passphrases, 4 words, "-", lowercase
+let many = PassphraseGenerator.generateMultiple(count: 5)
+
+// Custom configuration
+let custom = PassphraseGenerator.generateMultiple(
+    count: 3,
+    wordCount: 5,
+    separator: ".",
+    casing: .capitalize
+)
+
+// Using a custom word list
+let words = ["apple", "banana", "cherry", "dog", "elephant"]
+let fromCustom = PassphraseGenerator.generateMultiple(
+    count: 3,
+    wordCount: 3,
+    customWords: words
+)
+```
+
+### Custom word lists
+
+```swift
+import PassphraseGenerator
+
+let words = ["apple", "banana", "cherry", "dog", "elephant"]
+let passphrase = PassphraseGenerator.generate(
     wordCount: 3,
     separator: "_",
     casing: .uppercase,
-    customWords: customWords
+    customWords: words
 )
-// "APPLE_DRAGON_BANANA"
+// "APPLE_CHERRY_DOG"
 ```
 
-### Security Analysis
+### Measuring strength
 
 ```swift
-// Calculate entropy for your passphrase configuration
-let entropy = PassphraseGenerator.entropy(wordCount: 4) // ~51.7 bits
-let strongEntropy = PassphraseGenerator.entropy(wordCount: 6) // ~77.5 bits
+import PassphraseGenerator
 
-// Get information about the built-in wordlist
+let bits = PassphraseGenerator.entropy(wordCount: 4, wordListSize: 7776)
+// ~51.7
+
 let info = PassphraseGenerator.wordListInfo()
-print("Using \(info.name) with \(info.wordCount) words")
-print("Entropy per word: \(info.entropyPerWord) bits")
+print(info.wordCount)        // 7776
+print(info.entropyPerWord)   // ~12.92
 ```
 
-## API Reference
+## Models
 
-### Core Methods
+| Type | Description |
+|------|-------------|
+| `CasingStyle` | `.lowercase`, `.uppercase`, `.capitalize`, `.sentenceCase`, `.alternating`. |
+| `WordListInfo` | Wordlist `name`, `wordCount`, `entropyPerWord`, and `description`. |
 
-#### `generate()`
-Generate a passphrase with default settings (4 words, lowercase, hyphen-separated).
+## How It Works
 
-#### `generate(wordCount:separator:casing:)`
-Generate a customized passphrase using the built-in EFF wordlist.
+Each word is chosen by drawing four cryptographically secure random bytes via `SecRandomCopyBytes` and reducing them modulo the word-list size, giving a uniform, unbiased selection. The built-in EFF Large Wordlist is loaded once and cached for thread-safe reuse. Word counts are clamped to 2–10 and batch sizes to 1–1000 for security and performance.
 
-- `wordCount`: Number of words (2-10, automatically clamped)
-- `separator`: String to place between words
-- `casing`: Capitalization style
+## Testing
 
-#### `generate(wordCount:separator:casing:customWords:)`
-Generate a passphrase using your own word list.
-
-### Utility Methods
-
-#### `entropy(wordCount:wordListSize:)`
-Calculate the entropy (strength) of a passphrase configuration in bits.
-
-#### `wordListInfo()`
-Get metadata about the built-in EFF Large Wordlist.
-
-### Casing Styles
-
-```swift
-public enum CasingStyle {
-    case lowercase     // "word-word-word"
-    case uppercase     // "WORD-WORD-WORD"
-    case capitalize    // "Word-Word-Word"
-    case sentenceCase  // "Word-word-word"
-    case alternating   // "word-WORD-word"
-}
+```bash
+swift test
 ```
 
-## Security Guidelines
-
-### Entropy Recommendations
-
-- **40-50 bits**: Adequate for most personal use
-- **50-60 bits**: Strong for business applications
-- **60+ bits**: Excellent for high-security requirements
-
-### Default Configuration Security
-
-The default 4-word passphrase provides approximately **51.7 bits of entropy**, which is suitable for most applications. For higher security requirements, increase the word count:
-
-```swift
-// High security: ~77.5 bits of entropy
-let secure = PassphraseGenerator.generate(wordCount: 6)
-```
-
-### Custom Word Lists
-
-When using custom word lists, ensure they:
-- Contain enough words (hundreds or thousands)
-- Use diverse, unrelated words
-- Avoid predictable patterns or sequences
-
-## Performance
-
-SwiftPassphrases is optimized for performance:
-
-- **First call**: ~2ms (includes word list loading)
-- **Subsequent calls**: ~0.002ms (cached word list)
-- **Memory usage**: ~200KB for the EFF wordlist cache
-- **Thread-safe**: No performance penalty for concurrent access
-
-## Requirements
-
-- iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+
-- Swift 6.0+
-- Xcode 16.0+
-
-## About the EFF Large Wordlist
-
-This library uses the [EFF Large Wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases), which contains 7,776 carefully selected words that are:
-
-- **Memorable** - Common, recognizable words
-- **Distinct** - Phonetically different to avoid confusion
-- **Clean** - Free from offensive or problematic content
-- **Optimized** - Uniform length distribution for maximum entropy
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+The test suite covers default and custom generation, casing styles, batch generation, custom word lists, and entropy calculations.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — see LICENSE file for details.
 
-## Credits
+## Author
 
-- **EFF Large Wordlist** - Created by the [Electronic Frontier Foundation](https://www.eff.org)
-- **Inspiration** - Based on the [Diceware](https://diceware.dmuth.org/) passphrase generation method
-
----
-
-**Made with ❤️ for secure, memorable passwords**
+Created by David Sherlock ([ArrayPress](https://github.com/arraypress)) in 2026.
