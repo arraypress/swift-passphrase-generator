@@ -341,24 +341,10 @@ private extension PassphraseGenerator {
     /// - Parameter words: Array of words to select from
     /// - Returns: A randomly selected word from the array
     static func selectRandomWord(from words: [String]) -> String {
-        // Generate cryptographically secure random bytes
-        var randomBytes = Data(count: 4)
-        let status = randomBytes.withUnsafeMutableBytes { bytes in
-            SecRandomCopyBytes(kSecRandomDefault, 4, bytes.bindMemory(to: UInt8.self).baseAddress!)
-        }
-        
-        // Ensure random generation succeeded
-        guard status == errSecSuccess else {
-            fatalError("Failed to generate cryptographically secure random bytes")
-        }
-        
-        // Convert bytes to integer and get array index
-        let randomValue = randomBytes.withUnsafeBytes { bytes in
-            bytes.bindMemory(to: UInt32.self).first ?? 0
-        }
-        
-        let index = Int(randomValue % UInt32(words.count))
-        return words[index]
+        precondition(!words.isEmpty, "word list must not be empty")
+        // Reduction goes through SecureRandom rather than a plain `%`, which
+        // would skew the first 2,560 of 7,776 diceware words.
+        return words[SecureRandom.index(upperBound: words.count)]
     }
     
     /// Apply the specified casing style to an array of words.

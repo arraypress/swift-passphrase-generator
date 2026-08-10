@@ -310,3 +310,57 @@ final class PassphraseTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Secure Random
+
+extension PassphraseTests {
+
+    func testRejectionThresholdIsTwoToThe32ModN() {
+        // The tail that must be discarded is exactly 2^32 mod n.
+        for n in [94, 7776, 62, 26, 10, 3] {
+            let expected = UInt32((4_294_967_296 % n))
+            XCTAssertEqual(SecureRandom.rejectionThreshold(upperBound: n), expected, "n=\(n)")
+        }
+    }
+
+    func testPowersOfTwoRejectNothing() {
+        // 2^32 divides evenly, so no draw is ever wasted.
+        for n in [2, 4, 16, 64, 256, 65536] {
+            XCTAssertEqual(SecureRandom.rejectionThreshold(upperBound: n), 0, "n=\(n)")
+        }
+    }
+
+    func testIndexStaysInRange() {
+        for n in [1, 2, 3, 94, 7776] {
+            for _ in 0..<500 {
+                let index = SecureRandom.index(upperBound: n)
+                XCTAssertTrue((0..<n).contains(index), "n=\(n) produced \(index)")
+            }
+        }
+    }
+
+    func testSingleElementRangeAlwaysYieldsZero() {
+        XCTAssertEqual(SecureRandom.index(upperBound: 1), 0)
+    }
+
+    func testEveryOutcomeAppearsAndNoneDominates() {
+        // Not a proof of uniformity — that needs far more samples than a unit
+        // test should take — but it catches a reduction that collapses the range
+        // or strands part of it.
+        let n = 16
+        let draws = 16_000
+        var counts = [Int](repeating: 0, count: n)
+        for _ in 0..<draws { counts[SecureRandom.index(upperBound: n)] += 1 }
+
+        let expected = draws / n
+        XCTAssertFalse(counts.contains(0), "an outcome never appeared: \(counts)")
+        for (value, count) in counts.enumerated() {
+            XCTAssertLessThan(abs(count - expected), expected / 2, "outcome \(value) skewed: \(counts)")
+        }
+    }
+
+    func testDrawsAreNotConstant() {
+        let values = Set((0..<64).map { _ in SecureRandom.uint32() })
+        XCTAssertGreaterThan(values.count, 60, "random source is returning repeats")
+    }
+}
